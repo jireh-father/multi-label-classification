@@ -10,6 +10,20 @@ from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 from nsml import DATASET_PATH
 
+def get_class_weights(add_value=0.0):
+    train_label_path = os.path.join(DATASET_PATH, 'train', 'train_label')
+    label_matrix = np.load(train_label_path)
+    unq_count = np.zeros_like(label_matrix[0])
+    y = np.bincount(np.where(label_matrix == 1)[1])
+    idx = np.nonzero(y)[0]
+    for id, cnt in zip(idx, y[idx]):
+        unq_count[id] += cnt
+    log_unq_count = np.log10(unq_count)
+    weight = 1 - (log_unq_count / np.max(log_unq_count))
+    if add_value > 0:
+        weight = (weight + add_value) / (1. + add_value)
+    return weight
+
 def train_dataloader(input_size=128,
                     batch_size=64,
                     num_workers=0,
@@ -19,6 +33,14 @@ def train_dataloader(input_size=128,
     train_label_path = os.path.join(DATASET_PATH, 'train', 'train_label') 
     train_meta_path = os.path.join(DATASET_PATH, 'train', 'train_data', 'train_with_valid_tags.csv')
     train_meta_data = pd.read_csv(train_meta_path, delimiter=',', header=0)
+
+    # label_matrix = np.load(train_label_path)
+    # unq_count = np.zeros_like(label_matrix[0])
+    # y = np.bincount(np.where(label_matrix == 1)[1])
+    # idx = np.nonzero(y)[0]
+    # for id, cnt in zip(idx, y[idx]):
+    #     unq_count[id] += cnt
+
 
     dataloader = DataLoader(
         AIRushDataset(image_dir, train_meta_data, label_path=train_label_path, 

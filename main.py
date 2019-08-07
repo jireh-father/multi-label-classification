@@ -11,8 +11,11 @@ import nsml
 import pandas as pd
 from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
-from dataloader import train_dataloader
+from dataloader import train_dataloader, get_class_weights
 from dataloader import AIRushDataset
+from datetime import datetime
+from efficientnet_pytorch import EfficientNet
+
 
 def to_np(t):
     return t.cpu().detach().numpy()
@@ -76,7 +79,6 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--num_workers', type=int, default=8)
     parser.add_argument('--gpu_num', type=int, nargs='+', default=[0])
-    parser.add_argument('--resnet', default=True)
     parser.add_argument('--hidden_size', type=int, default=256)
     parser.add_argument('--output_size', type=int, default=350) # Fixed
     parser.add_argument('--epochs', type=int, default=100)
@@ -84,18 +86,18 @@ if __name__ == '__main__':
     parser.add_argument('--learning_rate', type=float, default=2.5e-4)
     parser.add_argument('--device', type=int, default=0)
     parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--class_weight_adding', type=float, default=0.2)
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
     device = args.device
 
-    if args.resnet:
-        assert args.input_size == 224
-        model = Resnet(args.output_size)
-        # model = Resnet152(args.output_size)
-    else:
-        model = Baseline(args.hidden_size, args.output_size)
-    print(model.__class__.__name__)
+
+    model = Resnet(args.output_size)
+    # model = Resnet152(args.output_size)
+    # model = EfficientNet.from_pretrained('efficientnet-b7', args.output_size)
+    # model = Baseline(args.hidden_size, args.output_size)
+
     optimizer = optim.Adam(model.parameters(), args.learning_rate)
     # criterion = nn.CrossEntropyLoss() #multi-class classification task
     # criterion = nn.BCELoss()  # multi-class classification task
@@ -103,7 +105,14 @@ if __name__ == '__main__':
     # >>> criterion = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
     # todo: using label data, calculate weight for each class!
     # criterion = nn.BCEWithLogitsLoss()
-    criterion = nn.MultiLabelSoftMarginLoss()  # multi-class classification task
+    # criterion = nn.MultiLabelMarginLoss()  # multi-class classification task
+    class_weights = get_class_weights(args.class_weight_adding)
+    criterion = nn.MultiLabelSoftMarginLoss(torch.tensor(class_weights).cuda())  # multi-class classification task
+
+    print(model.__class__.__name__)
+    print(criterion.__class__.__name__)
+    print(optimizer.__class__.__name__)
+    print(args)
 
     model = model.to(device)
     model.train()
@@ -136,7 +145,7 @@ if __name__ == '__main__':
                 accuracy = bool_vector.sum() / len(bool_vector)
 
                 if batch_idx % args.log_interval == 0:
-                    print('Batch {} / {}: Batch Loss {:2.4f} / Batch Acc {:2.4f}'.format(batch_idx,
+                    print('[{}] Batch {} / {}: Batch Loss {:2.4f} / Batch Acc {:2.4f}'.format(datetime.now().strftime('%Y/%m/%d %H:%M:%S'), batch_idx,
                                                                              len(dataloader),
                                                                              loss.item(),
                                                                              accuracy))
@@ -144,7 +153,7 @@ if __name__ == '__main__':
                 total_correct += bool_vector.sum()
                     
             nsml.save(epoch_idx)
-            print('Epoch {} / {}: Loss {:2.4f} / Epoch Acc {:2.4f}'.format(epoch_idx,
+            print('[{}] Epoch {} / {}: Loss {:2.4f} / Epoch Acc {:2.4f}'.format(datetime.now().strftime('%Y/%m/%d %H:%M:%S'), epoch_idx,
                                                            args.epochs,
                                                            total_loss/len(dataloader.dataset),
                                                            total_correct/len(dataloader.dataset)))
