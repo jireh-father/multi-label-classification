@@ -9,6 +9,9 @@ from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 from nsml import DATASET_PATH
+from sklearn.model_selection import ShuffleSplit
+from operator import itemgetter
+
 
 def get_class_weights(add_value=0.0):
     train_label_path = os.path.join(DATASET_PATH, 'train', 'train_label')
@@ -24,61 +27,86 @@ def get_class_weights(add_value=0.0):
         weight = (weight + add_value) / (1. + add_value)
     return weight
 
+
 def train_dataloader(input_size=128,
-                    batch_size=64,
-                    num_workers=0,
-                    ):
-    
-    image_dir = os.path.join(DATASET_PATH, 'train', 'train_data', 'images') 
-    train_label_path = os.path.join(DATASET_PATH, 'train', 'train_label') 
+                     batch_size=64,
+                     num_workers=0,
+                     use_onehot_label=False
+                     ):
+    image_dir = os.path.join(DATASET_PATH, 'train', 'train_data', 'images')
+    label_path = os.path.join(DATASET_PATH, 'train', 'train_label')
     train_meta_path = os.path.join(DATASET_PATH, 'train', 'train_data', 'train_with_valid_tags.csv')
-    train_meta_data = pd.read_csv(train_meta_path, delimiter=',', header=0)
+    # tags_path = os.path.join(DATASET_PATH, 'train', 'train_data', 'tags.tsv')
+    meta_data = pd.read_csv(train_meta_path, delimiter=',', header=0)
+    # tags_meta_data = pd.read_csv(tags_path, delimiter='\t', header=0)
+    # print(tags_meta_data.iloc[:30])
 
-    # label_matrix = np.load(train_label_path)
-    # unq_count = np.zeros_like(label_matrix[0])
-    # y = np.bincount(np.where(label_matrix == 1)[1])
-    # idx = np.nonzero(y)[0]
-    # for id, cnt in zip(idx, y[idx]):
-    #     unq_count[id] += cnt
+    label_matrix = np.load(label_path)
 
+    rs = ShuffleSplit(n_splits=1, test_size=.1, random_state=42)
+    for train_index, val_index in rs.split(meta_data):
+        val_meta_data = meta_data.iloc[val_index]
+        train_meta_data = meta_data.iloc[train_index]
 
-    dataloader = DataLoader(
-        AIRushDataset(image_dir, train_meta_data, label_path=train_label_path, 
-                      transform=transforms.Compose([transforms.Resize((input_size, input_size)), transforms.ToTensor()])),
+        train_labels = label_matrix[train_index]
+        val_labels = label_matrix[val_index]
+
+        print("train_x", len(train_meta_data))
+        print("val_x", len(val_meta_data))
+        print("train_y", len(train_labels))
+        print("val_y", len(val_labels))
+
+    train_dataloader = DataLoader(
+        AIRushDataset(image_dir, train_meta_data, label_path=train_labels,
+                      transform=transforms.Compose(
+                          [transforms.Resize((input_size, input_size)), transforms.ToTensor()]),
+                      use_onehot_label=use_onehot_label),
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
         pin_memory=True)
-    return dataloader
+
+    val_dataloader = DataLoader(
+        AIRushDataset(image_dir, val_meta_data, label_path=val_labels,
+                      transform=transforms.Compose(
+                          [transforms.Resize((input_size, input_size)), transforms.ToTensor()]),
+                      use_onehot_label=use_onehot_label),
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+        pin_memory=True)
+    return train_dataloader, val_dataloader
 
 
 class AIRushDataset(Dataset):
-    def __init__(self, image_data_path, meta_data, label_path=None, transform=None):
+    def __init__(self, image_data_path, meta_data, label_path=None, transform=None, use_onehot_label=False):
         self.meta_data = meta_data
         self.image_dir = image_data_path
-        self.label_path = label_path
+        self.label_matrix = label_path
         self.transform = transform
-        
-        if self.label_path is not None:
-            self.label_matrix = np.load(label_path)
+        self.use_onehot_label = use_onehot_label
 
     def __len__(self):
         return len(self.meta_data)
 
     def __getitem__(self, idx):
-        img_name = os.path.join(self.image_dir , str(self.meta_data['package_id'].iloc[idx]) , str(self.meta_data['sticker_id'].iloc[idx]) + '.png')
+        img_name = os.path.join(self.image_dir, str(self.meta_data['package_id'].iloc[idx]),
+                                str(self.meta_data['sticker_id'].iloc[idx]) + '.png')
         png = Image.open(img_name).convert('RGBA')
-        png.load() # required for png.split()
+        png.load()  # required for png.split()
 
         new_img = Image.new("RGB", png.size, (255, 255, 255))
-        new_img.paste(png, mask=png.split()[3]) # 3 is the alpha channel
+        new_img.paste(png, mask=png.split()[3])  # 3 is the alpha channel
 
         if self.transform:
             new_img = self.transform(new_img)
-        
-        if self.label_path is not None:
-            # tags = torch.tensor(np.argmax(self.label_matrix[idx])) # here, we will use only one label among multiple labels.
-            tags = torch.tensor(self.label_matrix[idx])  # here, we will use only one label among multiple labels.
+
+        if self.label_matrix is not None:
+            if self.use_onehot_label:
+                tags = torch.tensor(self.label_matrix[idx])  # here, we will use only one label among multiple labels.
+            else:
+                tags = torch.tensor(
+                    np.argmax(self.label_matrix[idx]))  # here, we will use only one label among multiple labels.
             return new_img, tags
         else:
             return new_img

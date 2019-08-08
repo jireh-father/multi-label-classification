@@ -6,9 +6,9 @@ setup(
     version='1.0',
     install_requires=[
             'tqdm',
-            'torch>=1.0',
+            'torch==1.1.0',
             'pickle-mixin',
-            'torchvision',
+            'torchvision==0.3.0',
             'pandas',
 
     ]

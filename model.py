@@ -29,7 +29,7 @@ class Baseline(nn.Module):
         return self.net(image).squeeze(-1).squeeze(-1)
 
 
-class Resnet(nn.Module):
+class Resnet18(nn.Module):
     def __init__(self, out_size):
         super().__init__()
         model = models.resnet18(pretrained=True)
