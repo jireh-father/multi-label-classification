@@ -92,8 +92,8 @@ if __name__ == '__main__':
     # train
     parser.add_argument('--nsml_checkpoint', type=str, default="16")
     parser.add_argument('--nsml_session', type=str, default="team_13/airush1/139")
-    parser.add_argument('--load_nsml_cp', type=bool, default=True)
-    parser.add_argument('--only_save', type=bool, default=True)
+    parser.add_argument('--load_nsml_cp', type=bool, default=False)
+    parser.add_argument('--only_save', type=bool, default=False)
     parser.add_argument('--use_train', type=bool, default=True)
     parser.add_argument('--use_val', type=bool, default=True)
 
@@ -103,7 +103,7 @@ if __name__ == '__main__':
     parser.add_argument('--infer_batch_size', type=int, default=64)
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--learning_rate', type=float, default=2.5e-4)
-    parser.add_argument('--class_weight_adding', type=float, default=0.2)
+    parser.add_argument('--class_weight_adding', type=float, default=0.8)
     parser.add_argument('--loss_type', type=str, default="multi_soft_margin") #cross_entropy, bce, multi_soft_margin, multi_margin
     parser.add_argument('--model', type=str, default="Resnet18") # Resnet18, Resnet152, efficientnet-b7, baseline
 
@@ -213,8 +213,8 @@ if __name__ == '__main__':
                         step=epoch_idx,
                         scope=locals(),
                         **{
-                        "train__Loss": total_loss/len(dataloader.dataset),
-                        "train__Accuracy": total_correct/len(dataloader.dataset),
+                        "train__Loss": total_loss/float(len(dataloader.dataset)),
+                        "train__Accuracy": total_correct/float(len(dataloader.dataset)),
                         })
 
                 if args.use_val:
@@ -263,8 +263,8 @@ if __name__ == '__main__':
                         step=epoch_idx,
                         scope=locals(),
                         **{
-                            "val__Loss": total_loss / len(val_dataloader.dataset),
-                            "val__Accuracy": total_correct / len(val_dataloader.dataset),
+                            "val__Loss": total_loss / float(len(val_dataloader.dataset)),
+                            "val__Accuracy": total_correct / float(len(val_dataloader.dataset)),
                         })
                     model.train()
                     if args.use_val and not args.use_train:
