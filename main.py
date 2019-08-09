@@ -243,6 +243,8 @@ if __name__ == '__main__':
                         **{
                             "train__Loss": total_loss / float(len(dataloader.dataset)),
                             "train__Accuracy": total_correct / float(len(dataloader.dataset)),
+                            "train__LankAp": total_ranking_ap_score / float(len(dataloader.dataset)),
+                            "train__LankLoss": total_ranking_loss / float(len(dataloader.dataset)),
                         })
 
                 if args.use_val:
@@ -311,6 +313,8 @@ if __name__ == '__main__':
                         **{
                             "val__Loss": total_loss / float(len(val_dataloader.dataset)),
                             "val__Accuracy": total_correct / float(len(val_dataloader.dataset)),
+                            "val__LankAp": total_ranking_ap_score / float(len(val_dataloader.dataset)),
+                            "val__LankLoss": total_ranking_loss / float(len(val_dataloader.dataset)),
                         })
                     model.train()
                     if args.use_val and not args.use_train:
