@@ -57,16 +57,20 @@ def bind_model(model_nsml, args, infer_transform_list, infer_batch_size):
         model_nsml.to(device)
         model_nsml.eval()
         predict_list = []
+        output_probs = None
         for batch_idx, image in enumerate(dataloader):
             image = image.to(device)
             output = model_nsml(image).double()
 
-            output_prob = output
             if args.loss_type == "cross_entropy":
                 output_prob = F.softmax(output, dim=1)
-            elif args.loss_type == "bce":
+            else:
                 output_prob = torch.sigmoid(output)
 
+            if output_probs is None:
+                output_probs = to_np(output_prob)
+            else:
+                output_probs = np.concatenate([output_probs, to_np(output_prob)], axis=0)
             predict = np.argmax(to_np(output_prob), axis=1)
             predict_list.append(predict)
 

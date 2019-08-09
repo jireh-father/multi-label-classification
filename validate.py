@@ -174,17 +174,19 @@ if __name__ == '__main__':
         batch_size = (256 if m_name == "Resnet18" else 32)
         if args.transform == "5crop":
             transform = transforms.Compose([transforms.Resize((args.input_size, args.input_size)),
-                                            transforms.FiveCrop(args.input_size), transforms.Lambda(
+                                            transforms.FiveCrop((args.input_size, args.input_size)), transforms.Lambda(
                     lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops]))])
             batch_size //= 5
         elif args.transform == "10crop":
-            transform = transforms.Compose([transforms.TenCrop(args.input_size), transforms.Lambda(
+            transform = transforms.Compose([transforms.TenCrop((args.input_size, args.input_size)), transforms.Lambda(
                 lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops]))])
             batch_size //= 10
 
         dataloader, val_dataloader = train_dataloader(args.input_size, batch_size,
                                                       args.num_workers,
-                                                      transform=transform)
+                                                      infer_batch_size=batch_size,
+                                                      transform=transform,
+                                                      infer_transform=transform)
 
         for nsml_cp in nsml_checkpoints:
             # Warning: Do not load data before this line
