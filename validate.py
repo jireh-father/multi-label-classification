@@ -95,7 +95,7 @@ if __name__ == '__main__':
 
     # train
     parser.add_argument('--nsml_checkpoint', type=str, default="1,2,3,4,5,6,7,8,9")
-    parser.add_argument('--nsml_session', type=str, default="220,139,185,221,242,243")
+    parser.add_argument('--nsml_session', type=str, default="185,221,242,243")
     parser.add_argument('--load_nsml_cp', type=bool, default=True)
     parser.add_argument('--only_save', type=bool, default=False)
     parser.add_argument('--use_train', type=bool, default=False)
@@ -108,12 +108,13 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--learning_rate', type=float, default=2.5e-4)
 
-    parser.add_argument('--class_weight_adding', type=str, default="0.0,0.2,0.8,0.0,0.2,0.0")
+    parser.add_argument('--class_weight_adding', type=str, default="0.8,0.0,0.2,0.0")
+    parser.add_argument('--transform', type=str, default="5crop")  # default, 5crop, 10crop
     parser.add_argument('--loss_type', type=str,
-                        default="cross_entropy,multi_soft_margin,multi_soft_margin,multi_soft_margin,multi_soft_margin,multi_soft_margin")
+                        default="multi_soft_margin,multi_soft_margin,multi_soft_margin,multi_soft_margin")
     # cross_entropy, bce, multi_soft_margin, multi_margin, focal_loss, kldiv
     parser.add_argument('--model', type=str,
-                        default="Resnet18,Resnet18,Resnet18,Resnet18,Resnet18,Resnet18")  # Resnet18, Resnet152, efficientnet-b7, baseline
+                        default="Resnet18,Resnet18,Resnet18,Resnet18")  # Resnet18, Resnet152, efficientnet-b7, baseline
 
     args = parser.parse_args()
 
@@ -169,7 +170,21 @@ if __name__ == '__main__':
             nsml.paused(scope=locals())
 
         model.eval()
-        dataloader, val_dataloader = train_dataloader(args.input_size, (256 if m_name == "Resnet18" else 32), args.num_workers)
+        transform = None
+        batch_size = (256 if m_name == "Resnet18" else 32)
+        if args.transform == "5crop":
+            transform = transforms.Compose([transforms.Resize((args.input_size, args.input_size)),
+                                            transforms.FiveCrop(args.input_size), transforms.Lambda(
+                    lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops]))])
+            batch_size //= 5
+        elif args.transform == "10crop":
+            transform = transforms.Compose([transforms.TenCrop(args.input_size), transforms.Lambda(
+                lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops]))])
+            batch_size //= 10
+
+        dataloader, val_dataloader = train_dataloader(args.input_size, batch_size,
+                                                      args.num_workers,
+                                                      transform=transform)
 
         for nsml_cp in nsml_checkpoints:
             # Warning: Do not load data before this line
@@ -186,7 +201,14 @@ if __name__ == '__main__':
             for batch_idx, (image, tags) in enumerate(val_dataloader):
                 image = image.to(device)
                 tags = tags.to(device)
-                output = model(image).double()
+
+                if args.transform in ["5crop", "10crop"]:
+                    # In your test loop you can do the following:
+                    bs, ncrops, c, h, w = image.size()
+                    output = model(image.view(-1, c, h, w)).double()  # fuse batch size and ncrops
+                    output = output.view(bs, ncrops, -1).mean(1)  # avg over crops
+                else:
+                    output = model(image).double()
                 if loss_type == "cross_entropy":
                     loss = criterion(output, torch.argmax(tags, dim=1))
                 else:

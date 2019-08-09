@@ -23,7 +23,7 @@ def to_np(t):
     return t.cpu().detach().numpy()
 
 
-def bind_model(model_nsml, args):
+def bind_model(model_nsml, args, infer_transform_list, infer_batch_size):
     def save(dir_name, **kwargs):
         save_state_path = os.path.join(dir_name, 'state_dict.pkl')
         state = {
@@ -42,14 +42,13 @@ def bind_model(model_nsml, args):
         # DONOTCHANGE This Line
         test_meta_data = pd.read_csv(test_meta_data_path, delimiter=',', header=0)
 
-        input_size = args.input_size  # you can change this according to your model.
-        batch_size = args.infer_batch_size  # you can change this. But when you use 'nsml submit --test' for test infer, there are only 200 number of data.
+        batch_size = infer_batch_size  # you can change this. But when you use 'nsml submit --test' for test infer, there are only 200 number of data.
         device = 0
 
         dataloader = DataLoader(
             AIRushDataset(test_image_data_path, test_meta_data, label_path=None,
                           transform=transforms.Compose(
-                              [transforms.Resize((input_size, input_size)), transforms.ToTensor()])),
+                              infer_transform_list)),
             batch_size=batch_size,
             shuffle=False,
             num_workers=0,
@@ -108,11 +107,21 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--learning_rate', type=float, default=2.5e-4)
 
+    parser.add_argument('--transform_random_crop', type=bool, default=False)
+    parser.add_argument('--transform_random_sized_crop', type=bool, default=True)
+    parser.add_argument('--transform_norm', type=bool, default=True)
+    parser.add_argument('--transform_hor_flip', type=bool, default=True)
+    parser.add_argument('--transform_color_jitter', type=bool, default=True)
+
+    parser.add_argument('--infer_transform_5crop', type=bool, default=True)
+    parser.add_argument('--infer_transform_10crop', type=bool, default=False)
+
     parser.add_argument('--class_weight_adding', type=float, default=0.0)
     parser.add_argument('--weight_decay', type=float, default=0.0)
     parser.add_argument('--nesterov', type=bool, default=True)
     parser.add_argument('--optimizer', type=str, default="adam")  # adam, sgd
-    parser.add_argument('--loss_type', type=str, default="multi_soft_margin")  # cross_entropy, bce, multi_soft_margin, multi_margin, focal_loss, kldiv
+    parser.add_argument('--loss_type', type=str,
+                        default="multi_soft_margin")  # cross_entropy, bce, multi_soft_margin, multi_margin, focal_loss, kldiv
     parser.add_argument('--model', type=str, default="Resnet18")  # Resnet18, Resnet152, efficientnet-b7, baseline
 
     args = parser.parse_args()
@@ -164,10 +173,74 @@ if __name__ == '__main__':
     print(model.__class__.__name__)
     print(args)
 
+    transform_list = []
+    infer_transform_list = []
+    if args.transform_random_crop:
+        transform_list.append(transforms.Resize(256))
+        transform_list.append(transforms.RandomCrop(args.input_size))
+    elif args.transform_random_sized_crop:
+        transform_list.append(transforms.RandomResizedCrop(args.input_size))
+    else:
+        transform_list.append(transforms.Resize(args.input_size))
+
+    if args.transform_hor_flip:
+        transform_list.append(transforms.RandomHorizontalFlip())
+    if args.transform_color_jitter:
+        transform_list.append(transforms.ColorJitter())
+
+    transform_list.append(transforms.ToTensor())
+    if args.transform_norm:
+        transform_list.append(
+            transforms.Normalize([0.44097832, 0.44847423, 0.42528335], [0.25748107, 0.26744914, 0.30532702]))
+
+    if args.infer_transform_5crop or args.infer_transform_10crop:
+        if args.transform_random_crop:
+            infer_transform_list.append(transforms.Resize(256))
+        elif args.transform_random_sized_crop:
+            infer_transform_list.append(transforms.Resize(256))
+        else:
+            infer_transform_list.append(transforms.Resize(args.input_size))
+
+        if args.transform_hor_flip:
+            infer_transform_list.append(transforms.RandomHorizontalFlip())
+        if args.transform_color_jitter:
+            infer_transform_list.append(transforms.ColorJitter())
+
+        if args.infer_transform_5crop:
+            infer_transform_list.append(transforms.FiveCrop(args.input_size))
+        else:
+            infer_transform_list.append(transforms.TenCrop(args.input_size))
+
+        if args.transform_norm:
+            infer_transform_list.append(transforms.Lambda(
+                lambda crops: torch.stack([transforms.Normalize([0.44097832, 0.44847423, 0.42528335],
+                                                                [0.25748107, 0.26744914, 0.30532702])(
+                    transforms.ToTensor()(crop)) for crop in crops])))
+        else:
+            infer_transform_list.append(transforms.Lambda(
+                lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops])))
+        if args.infer_transform_5crop:
+            infer_batch_size = args.infer_batch_size // 5
+        else:
+            infer_batch_size = args.infer_batch_size // 10
+    else:
+        if args.transform_random_crop:
+            infer_transform_list.append(transforms.Resize(256))
+            infer_transform_list.append(transforms.CenterCrop(args.input_size))
+        elif args.transform_random_sized_crop:
+            infer_transform_list.append(transforms.Resize(256))
+            infer_transform_list.append(transforms.CenterCrop(args.input_size))
+        else:
+            infer_transform_list.append(transforms.Resize(args.input_size))
+        infer_transform_list.append(transforms.ToTensor())
+        if args.transform_norm:
+            infer_transform_list.append(
+                transforms.Normalize([0.44097832, 0.44847423, 0.42528335], [0.25748107, 0.26744914, 0.30532702]))
+        infer_batch_size = args.infer_batch_size
     model = model.to(device)
 
     # DONOTCHANGE: They are reserved for nsml
-    bind_model(model, args)
+    bind_model(model, args, infer_transform_list, infer_batch_size)
     if args.pause:
         nsml.paused(scope=locals())
     if args.mode == "train":
@@ -184,7 +257,10 @@ if __name__ == '__main__':
         if args.only_save:
             nsml.save(args.nsml_session + "," + args.nsml_checkpoint)
         else:
-            dataloader, val_dataloader = train_dataloader(args.input_size, args.batch_size, args.num_workers)
+            dataloader, val_dataloader = train_dataloader(args.input_size, args.batch_size, args.num_workers,
+                                                          infer_batch_size=infer_batch_size,
+                                                          transform=transforms.Compose(transform_list),
+                                                          infer_transform=transforms.Compose(infer_transform_list))
 
             for epoch_idx in range(epoch_start, args.epochs + 1):
                 if args.use_train:
@@ -270,7 +346,15 @@ if __name__ == '__main__':
                     for batch_idx, (image, tags) in enumerate(val_dataloader):
                         image = image.to(device)
                         tags = tags.to(device)
-                        output = model(image).double()
+
+                        if args.infer_transform_5crop or args.infer_transform_10crop:
+                            # In your test loop you can do the following:
+                            bs, ncrops, c, h, w = image.size()
+                            output = model(image.view(-1, c, h, w)).double()  # fuse batch size and ncrops
+                            output = output.view(bs, ncrops, -1).mean(1)  # avg over crops
+                        else:
+                            output = model(image).double()
+
                         if args.loss_type == "cross_entropy":
                             loss = criterion(output, torch.argmax(tags, dim=1))
                         else:

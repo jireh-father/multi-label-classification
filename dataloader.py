@@ -29,7 +29,10 @@ def get_class_weights(add_value=0.0):
 
 def train_dataloader(input_size=128,
                      batch_size=64,
-                     num_workers=0
+                     num_workers=0,
+                     infer_batch_size=32,
+                     transform=None,
+                     infer_transform=None
                      ):
     image_dir = os.path.join(DATASET_PATH, 'train', 'train_data', 'images')
     label_path = os.path.join(DATASET_PATH, 'train', 'train_label')
@@ -53,11 +56,13 @@ def train_dataloader(input_size=128,
         print("val_x", len(val_meta_data))
         print("train_y", len(train_labels))
         print("val_y", len(val_labels))
+    if transform is None:
+        transform = transforms.Compose(
+                          [transforms.Resize((input_size, input_size)), transforms.ToTensor()])
 
     train_dataloader = DataLoader(
         AIRushDataset(image_dir, train_meta_data, label_path=train_labels,
-                      transform=transforms.Compose(
-                          [transforms.Resize((input_size, input_size)), transforms.ToTensor()])),
+                      transform=transform),
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
@@ -65,9 +70,8 @@ def train_dataloader(input_size=128,
 
     val_dataloader = DataLoader(
         AIRushDataset(image_dir, val_meta_data, label_path=val_labels,
-                      transform=transforms.Compose(
-                          [transforms.Resize((input_size, input_size)), transforms.ToTensor()])),
-        batch_size=batch_size//2,
+                      transform=infer_transform),
+        batch_size=infer_batch_size,
         shuffle=False,
         num_workers=num_workers,
         pin_memory=True)
