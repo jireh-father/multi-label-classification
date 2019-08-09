@@ -10,6 +10,7 @@ setup(
             'pickle-mixin',
             'torchvision==0.3.0',
             'pandas',
+            'scikit-learn==0.21.3'
 
     ]
 )

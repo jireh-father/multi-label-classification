@@ -10,7 +10,6 @@ from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 from nsml import DATASET_PATH
 from sklearn.model_selection import ShuffleSplit
-from operator import itemgetter
 
 
 def get_class_weights(add_value=0.0):
@@ -30,8 +29,7 @@ def get_class_weights(add_value=0.0):
 
 def train_dataloader(input_size=128,
                      batch_size=64,
-                     num_workers=0,
-                     use_onehot_label=False
+                     num_workers=0
                      ):
     image_dir = os.path.join(DATASET_PATH, 'train', 'train_data', 'images')
     label_path = os.path.join(DATASET_PATH, 'train', 'train_label')
@@ -59,8 +57,7 @@ def train_dataloader(input_size=128,
     train_dataloader = DataLoader(
         AIRushDataset(image_dir, train_meta_data, label_path=train_labels,
                       transform=transforms.Compose(
-                          [transforms.Resize((input_size, input_size)), transforms.ToTensor()]),
-                      use_onehot_label=use_onehot_label),
+                          [transforms.Resize((input_size, input_size)), transforms.ToTensor()])),
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
@@ -69,9 +66,8 @@ def train_dataloader(input_size=128,
     val_dataloader = DataLoader(
         AIRushDataset(image_dir, val_meta_data, label_path=val_labels,
                       transform=transforms.Compose(
-                          [transforms.Resize((input_size, input_size)), transforms.ToTensor()]),
-                      use_onehot_label=use_onehot_label),
-        batch_size=batch_size,
+                          [transforms.Resize((input_size, input_size)), transforms.ToTensor()])),
+        batch_size=batch_size//2,
         shuffle=False,
         num_workers=num_workers,
         pin_memory=True)
@@ -79,12 +75,11 @@ def train_dataloader(input_size=128,
 
 
 class AIRushDataset(Dataset):
-    def __init__(self, image_data_path, meta_data, label_path=None, transform=None, use_onehot_label=False):
+    def __init__(self, image_data_path, meta_data, label_path=None, transform=None):
         self.meta_data = meta_data
         self.image_dir = image_data_path
         self.label_matrix = label_path
         self.transform = transform
-        self.use_onehot_label = use_onehot_label
 
     def __len__(self):
         return len(self.meta_data)
@@ -102,11 +97,9 @@ class AIRushDataset(Dataset):
             new_img = self.transform(new_img)
 
         if self.label_matrix is not None:
-            if self.use_onehot_label:
-                tags = torch.tensor(self.label_matrix[idx])  # here, we will use only one label among multiple labels.
-            else:
-                tags = torch.tensor(
-                    np.argmax(self.label_matrix[idx]))  # here, we will use only one label among multiple labels.
+            tags = torch.tensor(self.label_matrix[idx])  # here, we will use only one label among multiple labels.
+            # tags = torch.tensor(
+            #     np.argmax(self.label_matrix[idx]))  # here, we will use only one label among multiple labels.
             return new_img, tags
         else:
             return new_img
