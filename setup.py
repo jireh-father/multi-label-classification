@@ -6,11 +6,10 @@ setup(
     version='1.0',
     install_requires=[
             'tqdm',
-            'torch==1.1.0',
+            'torch>1.0',
             'pickle-mixin',
-            'torchvision==0.3.0',
-            'pandas',
-            'scikit-learn==0.21.3'
+            'torchvision',
+            'pandas'
 
     ]
 )

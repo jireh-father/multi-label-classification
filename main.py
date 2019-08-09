@@ -96,8 +96,8 @@ if __name__ == '__main__':
     # train
     parser.add_argument('--nsml_checkpoint', type=str, default="9")
     parser.add_argument('--nsml_session', type=str, default="team_13/airush1/99")
-    parser.add_argument('--load_nsml_cp', type=bool, default=True)
-    parser.add_argument('--only_save', type=bool, default=True)
+    parser.add_argument('--load_nsml_cp', type=bool, default=False)
+    parser.add_argument('--only_save', type=bool, default=False)
     parser.add_argument('--use_train', type=bool, default=True)
     parser.add_argument('--use_val', type=bool, default=True)
 
@@ -109,8 +109,8 @@ if __name__ == '__main__':
     parser.add_argument('--learning_rate', type=float, default=2.5e-4)
 
     parser.add_argument('--class_weight_adding', type=float, default=0.0)
-    parser.add_argument('--loss_type', type=str, default="cross_entropy")  # cross_entropy, bce, multi_soft_margin, multi_margin, focal_loss
-    parser.add_argument('--model', type=str, default="Resnet152")  # Resnet18, Resnet152, efficientnet-b7, baseline
+    parser.add_argument('--loss_type', type=str, default="multi_margin")  # cross_entropy, bce, multi_soft_margin, multi_margin, focal_loss
+    parser.add_argument('--model', type=str, default="Resnet18")  # Resnet18, Resnet152, efficientnet-b7, baseline
 
     args = parser.parse_args()
 
