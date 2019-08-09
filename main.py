@@ -103,13 +103,16 @@ if __name__ == '__main__':
 
     # custom args
     parser.add_argument('--input_size', type=int, default=224)
-    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--infer_batch_size', type=int, default=64)
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--learning_rate', type=float, default=2.5e-4)
 
     parser.add_argument('--class_weight_adding', type=float, default=0.0)
-    parser.add_argument('--loss_type', type=str, default="multi_margin")  # cross_entropy, bce, multi_soft_margin, multi_margin, focal_loss
+    parser.add_argument('--weight_decay', type=float, default=0.0)
+    parser.add_argument('--nesterov', type=bool, default=True)
+    parser.add_argument('--optimizer', type=str, default="adam")  # adam, sgd
+    parser.add_argument('--loss_type', type=str, default="multi_soft_margin")  # cross_entropy, bce, multi_soft_margin, multi_margin, focal_loss, kldiv
     parser.add_argument('--model', type=str, default="Resnet18")  # Resnet18, Resnet152, efficientnet-b7, baseline
 
     args = parser.parse_args()
@@ -129,7 +132,14 @@ if __name__ == '__main__':
         raise Exception("model type is invalid : " + args.model)
 
     if args.mode == "train":
-        optimizer = optim.Adam(model.parameters(), args.learning_rate)
+        if args.optimizer == "adam":
+            optimizer = optim.Adam(model.parameters(), args.learning_rate, weight_decay=args.weight_decay)
+        elif args.optimizer == "sgd":
+            optimizer = optim.SGD(lr=args.learning_rate, momentum=0.9, weight_decay=args.weight_decay,
+                                  nesterov=args.nesterov)
+        else:
+            raise Exception("optimizer is invalid : " + args.optimizer)
+
         class_weights = None
         if args.class_weight_adding > 0:
             class_weights = torch.tensor(get_class_weights(args.class_weight_adding)).cuda()
@@ -144,6 +154,8 @@ if __name__ == '__main__':
             criterion = nn.MultiLabelMarginLoss()
         elif args.loss_type == "focal_loss":
             criterion = FocalLoss2d(weight=class_weights)
+        elif args.loss_type == "kldiv":
+            criterion = torch.nn.KLDivLoss()
         else:
             raise Exception("loss type is invalid : " + args.loss_type)
         print(criterion.__class__.__name__)
@@ -235,7 +247,7 @@ if __name__ == '__main__':
                             total_correct / float(len(dataloader.dataset)),
                             total_ranking_ap_score / float(len(dataloader.dataset)),
                             total_ranking_loss / float(len(dataloader.dataset)),
-                            ))
+                        ))
                     nsml.report(
                         summary=True,
                         step=epoch_idx,
@@ -297,14 +309,15 @@ if __name__ == '__main__':
                         total_ranking_ap_score += ranking_ap_score
                         total_ranking_loss += ranking_loss
 
-                    print('Val [{}] Epoch {} / {}: Loss {:2.4f} / Epoch Acc {:2.4f} / Lank AP {:2.4f} / Lank Loss {:2.4f}'.format(
+                    print(
+                        'Val [{}] Epoch {} / {}: Loss {:2.4f} / Epoch Acc {:2.4f} / Lank AP {:2.4f} / Lank Loss {:2.4f}'.format(
                             datetime.now().strftime('%Y/%m/%d %H:%M:%S'), epoch_idx,
                             args.epochs,
                             total_loss / float(len(val_dataloader.dataset)),
                             total_correct / float(len(val_dataloader.dataset)),
                             total_ranking_ap_score / float(len(val_dataloader.dataset)),
                             total_ranking_loss / float(len(val_dataloader.dataset)),
-                            ))
+                        ))
 
                     nsml.report(
                         summary=True,
