@@ -11,8 +11,9 @@ import nsml
 import pandas as pd
 from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
-from dataloader import train_dataloader, get_class_weights
-from dataloader import AIRushDataset
+from dataloader_one import train_dataloader, get_class_weights
+from dataloader_one import AIRushDataset
+from dataloader import train_val_dataloader
 from datetime import datetime
 from efficientnet_pytorch import EfficientNet
 from sklearn.metrics import label_ranking_average_precision_score, label_ranking_loss
@@ -278,11 +279,14 @@ if __name__ == '__main__':
         if args.only_save:
             nsml.save(args.nsml_session + "," + args.nsml_checkpoint)
         else:
-            dataloader, val_dataloader = train_dataloader(args.input_size, batch_size, args.num_workers,
-                                                          infer_batch_size=infer_batch_size,
-                                                          transform=transforms.Compose(transform_list),
-                                                          infer_transform=transforms.Compose(infer_transform_list))
-
+            if args.use_val:
+                dataloader, val_dataloader = train_val_dataloader(args.input_size, batch_size, args.num_workers,
+                                                              infer_batch_size=infer_batch_size,
+                                                              transform=transforms.Compose(transform_list),
+                                                              infer_transform=transforms.Compose(infer_transform_list))
+            else:
+                dataloader = train_dataloader(args.input_size, batch_size, args.num_workers,
+                                                                  transform=transforms.Compose(transform_list))
             for epoch_idx in range(epoch_start, args.epochs + 1):
                 if args.use_train:
                     total_loss = 0.

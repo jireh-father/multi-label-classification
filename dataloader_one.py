@@ -30,9 +30,7 @@ def get_class_weights(add_value=0.0):
 def train_dataloader(input_size=128,
                      batch_size=64,
                      num_workers=0,
-                     infer_batch_size=32,
                      transform=None,
-                     infer_transform=None
                      ):
     image_dir = os.path.join(DATASET_PATH, 'train', 'train_data', 'images')
     label_path = os.path.join(DATASET_PATH, 'train', 'train_label')
@@ -44,41 +42,19 @@ def train_dataloader(input_size=128,
 
     label_matrix = np.load(label_path)
 
-    rs = ShuffleSplit(n_splits=1, test_size=.1, random_state=42)
-    for train_index, val_index in rs.split(meta_data):
-        val_meta_data = meta_data.iloc[val_index]
-        train_meta_data = meta_data.iloc[train_index]
-
-        train_labels = label_matrix[train_index]
-        val_labels = label_matrix[val_index]
-
-        print("train_x", len(train_meta_data))
-        print("val_x", len(val_meta_data))
-        print("train_y", len(train_labels))
-        print("val_y", len(val_labels))
     if transform is None:
         transform = transforms.Compose(
                           [transforms.Resize((input_size, input_size)), transforms.ToTensor()])
-    if infer_transform is None:
-        infer_transform = transforms.Compose(
-                          [transforms.Resize((input_size, input_size)), transforms.ToTensor()])
 
     train_dataloader = DataLoader(
-        AIRushDataset(image_dir, train_meta_data, label_path=train_labels,
+        AIRushDataset(image_dir, meta_data, label_path=label_matrix,
                       transform=transform),
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
         pin_memory=True)
 
-    val_dataloader = DataLoader(
-        AIRushDataset(image_dir, val_meta_data, label_path=val_labels,
-                      transform=infer_transform),
-        batch_size=infer_batch_size,
-        shuffle=False,
-        num_workers=num_workers,
-        pin_memory=True)
-    return train_dataloader, val_dataloader
+    return train_dataloader
 
 
 class AIRushDataset(Dataset):
