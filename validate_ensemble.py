@@ -102,8 +102,8 @@ if __name__ == '__main__':
     parser.add_argument('--output_size', type=int, default=350)  # Fixed
 
     # train
-    parser.add_argument('--nsml_checkpoint', type=str, default="4,4,6,4/4,6,4,5,5/4,4,6/4,6,4")
-    parser.add_argument('--nsml_session', type=str, default="99,243,177,220/243,177,220,185,221/99,243,177/243,177,220")
+    parser.add_argument('--nsml_checkpoint', type=str, default="4,4")
+    parser.add_argument('--nsml_session', type=str, default="220,243")
     parser.add_argument('--load_nsml_cp', type=bool, default=True)
     parser.add_argument('--only_save', type=bool, default=False)
     parser.add_argument('--use_train', type=bool, default=False)
@@ -116,10 +116,10 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--learning_rate', type=float, default=2.5e-4)
 
-    parser.add_argument('--model_weight', type=str, default="0.4,0.2,0.2,0.2/0.2,0.2,0.2,0.2,0.2/0.5,0.25,0.25/0.34,0.33,0.33")
+    parser.add_argument('--model_weight', type=str, default="0.5,0.5")
     # cross_entropy, bce, multi_soft_margin, multi_margin, focal_loss, kldiv
     parser.add_argument('--model', type=str,
-                        default="Resnet152,Resnet18,Resnet18,Resnet18/Resnet18,Resnet18,Resnet18,Resnet18,Resnet18/Resnet152,Resnet18,Resnet18/Resnet18,Resnet18,Resnet18")  # Resnet18, Resnet152, efficientnet-b7, baseline
+                        default="Resnet18,Resnet18")  # Resnet18, Resnet152, efficientnet-b7, baseline
 
     args = parser.parse_args()
 
@@ -221,14 +221,13 @@ if __name__ == '__main__':
         bool_vector = predict_vector == label_vector
         accuracy = bool_vector.sum() / len(bool_vector)
 
-        ens_correct = bool_vector.sum()
         ens_ranking_ap_score = ranking_ap_score
         ens_ranking_loss = ranking_loss
 
         print(
             'Ens Val [{}] Acc {:2.4f} / Lank AP {:2.4f} / Lank Loss {:2.4f}'.format(
                 datetime.now().strftime('%Y/%m/%d %H:%M:%S'),
-                ens_correct, ens_ranking_ap_score, ens_ranking_loss))
+                accuracy, ens_ranking_ap_score, ens_ranking_loss))
 
         m_name_list = m_names.split(",")
         nsml_checkpoint_list = nsml_checkpoints[i].split(",")
@@ -242,7 +241,7 @@ if __name__ == '__main__':
             step=i,
             scope=locals(),
             **{
-                "ens_%s_%s__Accuracy" % (nsml_session_list, prefix): ens_correct,
+                "ens_%s_%s__Accuracy" % (nsml_session_list, prefix): accuracy,
                 "ens_%s_%s__LankAp" % (nsml_session_list, prefix): ens_ranking_ap_score,
                 "ens_%s_%s__LankLoss" % (nsml_session_list, prefix): ens_ranking_loss,
             })

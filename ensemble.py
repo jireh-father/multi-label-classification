@@ -142,12 +142,12 @@ if __name__ == '__main__':
 
     # train
     # cross_entropy, bce, multi_soft_margin, multi_margin, focal_loss, kldiv
-    parser.add_argument('--loss_types', type=str, default="cross_entropy,multi_soft_margin,bce,cross_entropy")
-    parser.add_argument('--nsml_checkpoints', type=str, default="4,4,6,4")
-    parser.add_argument('--nsml_sessionss', type=str, default="99,243,177,220")  # team_13/airush1/
-    parser.add_argument('--model_weights', type=str, default="0.4,0.2,0.2,0.2")
+    parser.add_argument('--loss_types', type=str, default="cross_entropy,cross_entropy")
+    parser.add_argument('--nsml_checkpoints', type=str, default="3,4")
+    parser.add_argument('--nsml_sessionss', type=str, default="99,99")  # team_13/airush1/
+    parser.add_argument('--model_weights', type=str, default="0.5,0.5")
     parser.add_argument('--models', type=str,
-                        default="Resnet152,Resnet18,Resnet18,Resnet18")  # Resnet18, Resnet152, efficientnet-b7, baseline
+                        default="Resnet152,Resnet152")  # Resnet18, Resnet152, efficientnet-b7, baseline
 
     args = parser.parse_args()
     print(args)

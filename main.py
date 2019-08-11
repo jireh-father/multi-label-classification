@@ -105,7 +105,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--infer_batch_size', type=int, default=64)
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--learning_rate', type=float, default=2.5e-4)
+    parser.add_argument('--learning_rate', type=float, default=1e-3)#2.5e-4)
 
     # train
     parser.add_argument('--nsml_checkpoint', type=str, default="5")
@@ -125,13 +125,13 @@ if __name__ == '__main__':
     parser.add_argument('--infer_transform_10crop', type=bool, default=False)
 
     parser.add_argument('--class_weight_adding', type=float, default=0.0)
-    parser.add_argument('--weight_decay', type=float, default=0.00004)  # 0.00004)
+    parser.add_argument('--weight_decay', type=float, default=0.0)  # 0.00004)
     parser.add_argument('--nesterov', type=bool, default=True)
 
     parser.add_argument('--optimizer', type=str, default="adam")  # adam, sgd, adabound, adamw
     parser.add_argument('--loss_type', type=str,
                         default="multi_soft_margin")  # cross_entropy, bce, multi_soft_margin, multi_margin, focal_loss, kldiv
-    parser.add_argument('--model', type=str, default="Resnext101")  # Resnet18, Resnet152, Resnext101, efficientnet-b7, baseline
+    parser.add_argument('--model', type=str, default="Resnet152")  # Resnet18, Resnet152, Resnext101, efficientnet-b7, baseline
 
     args = parser.parse_args()
 

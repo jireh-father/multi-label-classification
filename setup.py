@@ -8,7 +8,7 @@ setup(
             'tqdm',
             'torch==1.2.0',
             'pickle-mixin',
-            'torchvision',
+            'torchvision==0.4.0',
             'pandas'
 
     ]
