@@ -6,7 +6,7 @@ import torch.optim as optim
 import numpy as np
 import argparse
 import pathlib
-from model import Baseline, Resnet18, Resnet152, Resnext101
+from model import Baseline, Resnet18, Resnet152, Resnext101, WideResnet101
 import nsml
 import pandas as pd
 from torchvision import transforms
@@ -83,6 +83,7 @@ batch_size_map = {
     'Resnet152': 128,
     'efficientnet-b7': 16,
     'Resnext101': 64,
+    'WideResnet101': 64
 }
 
 if __name__ == '__main__':
@@ -105,7 +106,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--infer_batch_size', type=int, default=64)
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--learning_rate', type=float, default=1e-3)#2.5e-4)
+    parser.add_argument('--learning_rate', type=float, default=2.5e-4)
 
     # train
     parser.add_argument('--nsml_checkpoint', type=str, default="5")
@@ -113,7 +114,8 @@ if __name__ == '__main__':
     parser.add_argument('--load_nsml_cp', type=bool, default=False)
     parser.add_argument('--only_save', type=bool, default=False)
     parser.add_argument('--use_train', type=bool, default=True)
-    parser.add_argument('--use_val', type=bool, default=True)
+    parser.add_argument('--use_val', type=bool, default=False)
+    parser.add_argument('--val_ratio', type=float, default=0.0)
 
     parser.add_argument('--transform_random_crop', type=bool, default=False)
     parser.add_argument('--transform_random_sized_crop', type=bool, default=False)
@@ -130,8 +132,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--optimizer', type=str, default="adam")  # adam, sgd, adabound, adamw
     parser.add_argument('--loss_type', type=str,
-                        default="multi_soft_margin")  # cross_entropy, bce, multi_soft_margin, multi_margin, focal_loss, kldiv
-    parser.add_argument('--model', type=str, default="Resnet152")  # Resnet18, Resnet152, Resnext101, efficientnet-b7, baseline
+                        default="cross_entropy")  # cross_entropy, bce, multi_soft_margin, multi_margin, focal_loss, kldiv
+    parser.add_argument('--model', type=str, default="Resnext101")  # Resnet18, Resnet152, Resnext101, efficientnet-b7, WideResnet101, baseline
 
     args = parser.parse_args()
 
@@ -149,6 +151,8 @@ if __name__ == '__main__':
         model = Resnext101(args.output_size)
     elif args.model == "baseline":
         model = Baseline(args.hidden_size, args.output_size)
+    elif args.model == "WideResnet101":
+        model = WideResnet101(args.output_size)
     elif args.model.split("-")[0] == "efficientnet":
         model = EfficientNet.from_pretrained(args.model, args.output_size)
     else:
@@ -281,7 +285,8 @@ if __name__ == '__main__':
             dataloader, val_dataloader = train_dataloader(args.input_size, batch_size, args.num_workers,
                                                           infer_batch_size=infer_batch_size,
                                                           transform=transforms.Compose(transform_list),
-                                                          infer_transform=transforms.Compose(infer_transform_list))
+                                                          infer_transform=transforms.Compose(infer_transform_list),
+                                                          val_ratio=args.val_ratio)
 
             for epoch_idx in range(epoch_start, args.epochs + 1):
                 if args.use_train:

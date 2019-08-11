@@ -52,10 +52,21 @@ class Resnet152(nn.Module):
         return self.net(image).squeeze(-1).squeeze(-1)
 
 
-class Resnext101():
+class Resnext101(nn.Module):
     def __init__(self, out_size, pretrained=True):
         super().__init__()
         model = models.resnext101_32x8d(pretrained=pretrained)
+        model = list(model.children())[:-1]
+        model.append(nn.Conv2d(2048, out_size, 1))
+        self.net = nn.Sequential(*model)
+
+    def forward(self, image):
+        return self.net(image).squeeze(-1).squeeze(-1)
+
+class WideResnet101(nn.Module):
+    def __init__(self, out_size, pretrained=True):
+        super().__init__()
+        model = models.wide_resnet101_2(pretrained=pretrained)
         model = list(model.children())[:-1]
         model.append(nn.Conv2d(2048, out_size, 1))
         self.net = nn.Sequential(*model)

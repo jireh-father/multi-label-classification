@@ -106,11 +106,11 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--infer_batch_size', type=int, default=64)
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--learning_rate', type=float, default=0.000002)#2.5e-5)
+    parser.add_argument('--learning_rate', type=float, default=0.0000015)#2.5e-5)
 
     # train
-    parser.add_argument('--nsml_checkpoint', type=str, default="4")
-    parser.add_argument('--nsml_session', type=str, default="team_13/airush1/99")
+    parser.add_argument('--nsml_checkpoint', type=str, default="5")
+    parser.add_argument('--nsml_session', type=str, default="team_13/airush1/385")
     parser.add_argument('--load_nsml_cp', type=bool, default=True)
     parser.add_argument('--only_save', type=bool, default=False)
     parser.add_argument('--use_train', type=bool, default=True)
