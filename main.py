@@ -17,6 +17,8 @@ from datetime import datetime
 from efficientnet_pytorch import EfficientNet
 from sklearn.metrics import label_ranking_average_precision_score, label_ranking_loss
 from loss import FocalLoss2d
+
+
 # import adabound
 
 
@@ -106,12 +108,12 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--infer_batch_size', type=int, default=64)
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--learning_rate', type=float, default=2.5e-4)
+    parser.add_argument('--learning_rate', type=float, default=0.0000017)#2.5e-4)
 
     # train
     parser.add_argument('--nsml_checkpoint', type=str, default="5")
-    parser.add_argument('--nsml_session', type=str, default="team_13/airush1/243")
-    parser.add_argument('--load_nsml_cp', type=bool, default=False)
+    parser.add_argument('--nsml_session', type=str, default="team_13/airush1/385")
+    parser.add_argument('--load_nsml_cp', type=bool, default=True)
     parser.add_argument('--only_save', type=bool, default=False)
     parser.add_argument('--use_train', type=bool, default=True)
     parser.add_argument('--use_val', type=bool, default=False)
@@ -126,14 +128,18 @@ if __name__ == '__main__':
     parser.add_argument('--infer_transform_5crop', type=bool, default=False)
     parser.add_argument('--infer_transform_10crop', type=bool, default=False)
 
+    parser.add_argument('--sava_step_ratio', type=float, default=0.26)
+
     parser.add_argument('--class_weight_adding', type=float, default=0.0)
     parser.add_argument('--weight_decay', type=float, default=0.0)  # 0.00004)
     parser.add_argument('--nesterov', type=bool, default=True)
+    parser.add_argument('--use_random_label', type=bool, default=True)
 
-    parser.add_argument('--optimizer', type=str, default="adam")  # adam, sgd, adabound, adamw
+    parser.add_argument('--optimizer', type=str, default="sgd")  # adam, sgd, adabound, adamw
     parser.add_argument('--loss_type', type=str,
                         default="cross_entropy")  # cross_entropy, bce, multi_soft_margin, multi_margin, focal_loss, kldiv
-    parser.add_argument('--model', type=str, default="Resnext101")  # Resnet18, Resnet152, Resnext101, efficientnet-b7, WideResnet101, baseline
+    parser.add_argument('--model', type=str,
+                        default="Resnet152")  # Resnet18, Resnet152, Resnext101, efficientnet-b7, WideResnet101, baseline
 
     args = parser.parse_args()
 
@@ -272,6 +278,7 @@ if __name__ == '__main__':
         model.train()
         # Warning: Do not load data before this line
         epoch_start = 1
+
         if args.load_nsml_cp and args.nsml_checkpoint is not None and args.nsml_session is not None:
             nsml.load(checkpoint=args.nsml_checkpoint, session=args.nsml_session)
             print("load", args.nsml_session, args.nsml_checkpoint)
@@ -286,7 +293,13 @@ if __name__ == '__main__':
                                                           infer_batch_size=infer_batch_size,
                                                           transform=transforms.Compose(transform_list),
                                                           infer_transform=transforms.Compose(infer_transform_list),
-                                                          val_ratio=args.val_ratio)
+                                                          val_ratio=args.val_ratio,
+                                                          use_random_label=args.use_random_label)
+            if args.sava_step_ratio > 0:
+                save_step_interval = int(len(dataloader) * args.sava_step_ratio)
+                print("save_step_interval", save_step_interval, "total steps", len(dataloader))
+            else:
+                save_step_interval = None
 
             for epoch_idx in range(epoch_start, args.epochs + 1):
                 if args.use_train:
@@ -339,6 +352,9 @@ if __name__ == '__main__':
                         total_correct += bool_vector.sum()
                         total_ranking_ap_score += ranking_ap_score
                         total_ranking_loss += ranking_loss
+
+                        if save_step_interval is not None and batch_idx > 0 and batch_idx % save_step_interval == 0:
+                            nsml.save(str(epoch_idx) + "_" + str(batch_idx))
 
                     nsml.save(epoch_idx)
                     print(

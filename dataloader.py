@@ -9,6 +9,7 @@ from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 from nsml import DATASET_PATH
+import random
 from sklearn.model_selection import ShuffleSplit
 
 
@@ -33,7 +34,8 @@ def train_dataloader(input_size=128,
                      infer_batch_size=32,
                      transform=None,
                      infer_transform=None,
-                     val_ratio=0.1
+                     val_ratio=0.1,
+                     use_random_label=False
                      ):
     image_dir = os.path.join(DATASET_PATH, 'train', 'train_data', 'images')
     label_path = os.path.join(DATASET_PATH, 'train', 'train_label')
@@ -69,7 +71,7 @@ def train_dataloader(input_size=128,
 
         train_dataloader = DataLoader(
             AIRushDataset(image_dir, train_meta_data, label_path=train_labels,
-                          transform=transform),
+                          transform=transform,use_random_label=use_random_label),
             batch_size=batch_size,
             shuffle=True,
             num_workers=num_workers,
@@ -86,7 +88,7 @@ def train_dataloader(input_size=128,
     else:
         train_dataloader = DataLoader(
             AIRushDataset(image_dir, meta_data, label_path=label_matrix,
-                          transform=transform),
+                          transform=transform, use_random_label=use_random_label),
             batch_size=batch_size,
             shuffle=True,
             num_workers=num_workers,
@@ -95,11 +97,12 @@ def train_dataloader(input_size=128,
 
 
 class AIRushDataset(Dataset):
-    def __init__(self, image_data_path, meta_data, label_path=None, transform=None):
+    def __init__(self, image_data_path, meta_data, label_path=None, transform=None, use_random_label=False):
         self.meta_data = meta_data
         self.image_dir = image_data_path
         self.label_matrix = label_path
         self.transform = transform
+        self.use_random_label = use_random_label
 
     def __len__(self):
         return len(self.meta_data)
@@ -117,7 +120,13 @@ class AIRushDataset(Dataset):
             new_img = self.transform(new_img)
 
         if self.label_matrix is not None:
-            tags = torch.tensor(self.label_matrix[idx])  # here, we will use only one label among multiple labels.
+
+            if self.use_random_label:
+                random.seed(42)
+                tags = np.zeros_like(self.label_matrix[idx])
+                tags[random.choice(np.where(self.label_matrix[idx] == 1)[0])] = 1
+            else:
+                tags = torch.tensor(self.label_matrix[idx])  # here, we will use only one label among multiple labels.
             # tags = torch.tensor(
             #     np.argmax(self.label_matrix[idx]))  # here, we will use only one label among multiple labels.
             return new_img, tags
