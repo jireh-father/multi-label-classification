@@ -35,7 +35,7 @@ def train_dataloader(input_size=128,
                      transform=None,
                      infer_transform=None,
                      val_ratio=0.1,
-                     use_random_label=False
+                     use_random_label=False, seed=42
                      ):
     image_dir = os.path.join(DATASET_PATH, 'train', 'train_data', 'images')
     label_path = os.path.join(DATASET_PATH, 'train', 'train_label')
@@ -52,7 +52,7 @@ def train_dataloader(input_size=128,
                           [transforms.Resize((input_size, input_size)), transforms.ToTensor()])
 
     if val_ratio > 0:
-        rs = ShuffleSplit(n_splits=1, test_size=val_ratio, random_state=42)
+        rs = ShuffleSplit(n_splits=1, test_size=val_ratio, random_state=seed)
         for train_index, val_index in rs.split(meta_data):
             val_meta_data = meta_data.iloc[val_index]
             train_meta_data = meta_data.iloc[train_index]
@@ -97,12 +97,13 @@ def train_dataloader(input_size=128,
 
 
 class AIRushDataset(Dataset):
-    def __init__(self, image_data_path, meta_data, label_path=None, transform=None, use_random_label=False):
+    def __init__(self, image_data_path, meta_data, label_path=None, transform=None, use_random_label=False, seed=42):
         self.meta_data = meta_data
         self.image_dir = image_data_path
         self.label_matrix = label_path
         self.transform = transform
         self.use_random_label = use_random_label
+        self.seed = seed
 
     def __len__(self):
         return len(self.meta_data)
@@ -122,7 +123,7 @@ class AIRushDataset(Dataset):
         if self.label_matrix is not None:
 
             if self.use_random_label:
-                random.seed(42)
+                random.seed(self.seed)
                 tags = np.zeros_like(self.label_matrix[idx])
                 tags[random.choice(np.where(self.label_matrix[idx] == 1)[0])] = 1
             else:

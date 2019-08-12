@@ -96,7 +96,7 @@ if __name__ == '__main__':
     parser.add_argument('--pause', type=int, default=0)
 
     parser.add_argument('--device', type=int, default=0)
-    parser.add_argument('--seed', type=int, default=42)
+
     parser.add_argument('--log_interval', type=int, default=100)
     parser.add_argument('--hidden_size', type=int, default=256)
     parser.add_argument('--num_workers', type=int, default=8)
@@ -108,9 +108,10 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--infer_batch_size', type=int, default=64)
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--learning_rate', type=float, default=0.0000017)#2.5e-4)
+
 
     # train
+    parser.add_argument('--learning_rate', type=float, default=0.0000017)  # 2.5e-4)
     parser.add_argument('--nsml_checkpoint', type=str, default="5")
     parser.add_argument('--nsml_session', type=str, default="team_13/airush1/385")
     parser.add_argument('--load_nsml_cp', type=bool, default=True)
@@ -127,7 +128,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--infer_transform_5crop', type=bool, default=False)
     parser.add_argument('--infer_transform_10crop', type=bool, default=False)
-
+    parser.add_argument('--infer_transform_center_crop', type=bool, default=False)
+    parser.add_argument('--seed', type=int, default=41)  # 42)
     parser.add_argument('--sava_step_ratio', type=float, default=0.26)
 
     parser.add_argument('--class_weight_adding', type=float, default=0.0)
@@ -252,6 +254,13 @@ if __name__ == '__main__':
             infer_batch_size = infer_batch_size // 5
         else:
             infer_batch_size = infer_batch_size // 10
+    elif args.infer_transform_center_crop:
+        infer_transform_list.append(transforms.Resize((248, 248)))
+        infer_transform_list.append(transforms.CenterCrop((args.input_size, args.input_size)))
+        infer_transform_list.append(transforms.ToTensor())
+        if args.transform_norm:
+            infer_transform_list.append(
+                transforms.Normalize([0.44097832, 0.44847423, 0.42528335], [0.25748107, 0.26744914, 0.30532702]))
     else:
         if args.transform_random_crop:
             infer_transform_list.append(transforms.Resize((256, 256)))
@@ -294,7 +303,7 @@ if __name__ == '__main__':
                                                           transform=transforms.Compose(transform_list),
                                                           infer_transform=transforms.Compose(infer_transform_list),
                                                           val_ratio=args.val_ratio,
-                                                          use_random_label=args.use_random_label)
+                                                          use_random_label=args.use_random_label, seed=args.seed)
             if args.sava_step_ratio > 0:
                 save_step_interval = int(len(dataloader) * args.sava_step_ratio)
                 print("save_step_interval", save_step_interval, "total steps", len(dataloader))

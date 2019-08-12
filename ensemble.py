@@ -26,6 +26,8 @@ batch_size_map = {
     'Resnet18': 128,
     'Resnet152': 128,
     'efficientnet-b7': 16,
+    'Resnext101': 64,
+    'WideResnet101': 64
 }
 
 def bind_model(model_nsml, args):
@@ -55,21 +57,51 @@ def bind_model(model_nsml, args):
         nsml_checkpoints = args.nsml_checkpoints.split(",")
         loss_types = args.loss_types.split(",")
 
+        transform_random_crop = args.transform_random_crop.split(",")
+        transform_random_sized_crop = args.transform_random_sized_crop.split(",")
+        transform_norm = args.transform_norm.split(",")
+        infer_transform_center_crop = args.infer_transform_center_crop.split(",")
+
         total_output_probs = None
-        before_batch_size = -1
         for i, model_name in enumerate(models):
             batch_size = batch_size_map[model_name] // 2
-            if before_batch_size != batch_size:
-                dataloader = DataLoader(
-                    AIRushDataset(test_image_data_path, test_meta_data, label_path=None,
-                                  transform=transforms.Compose(
-                                      [transforms.Resize((args.input_size, args.input_size)), transforms.ToTensor()])),
-                    batch_size=batch_size,
-                    shuffle=False,
-                    num_workers=0,
-                    pin_memory=True)
 
-            before_batch_size = batch_size
+            infer_transform_list = []
+
+            if infer_transform_center_crop[i]:
+                infer_transform_list.append(transforms.Resize((248, 248)))
+                infer_transform_list.append(transforms.CenterCrop((args.input_size, args.input_size)))
+                infer_transform_list.append(transforms.ToTensor())
+                if transform_norm[i]:
+                    infer_transform_list.append(
+                        transforms.Normalize([0.44097832, 0.44847423, 0.42528335],
+                                             [0.25748107, 0.26744914, 0.30532702]))
+            else:
+                if transform_random_crop[i]:
+                    infer_transform_list.append(transforms.Resize((256, 256)))
+                    infer_transform_list.append(transforms.CenterCrop((args.input_size, args.input_size)))
+                elif transform_random_sized_crop[i]:
+                    infer_transform_list.append(transforms.Resize((256, 256)))
+                    infer_transform_list.append(transforms.CenterCrop((args.input_size, args.input_size)))
+                else:
+                    infer_transform_list.append(transforms.Resize((args.input_size, args.input_size)))
+                infer_transform_list.append(transforms.ToTensor())
+                if transform_norm[i]:
+                    infer_transform_list.append(
+                        transforms.Normalize([0.44097832, 0.44847423, 0.42528335],
+                                             [0.25748107, 0.26744914, 0.30532702]))
+
+            print("transform", infer_transform_list)
+
+            dataloader = DataLoader(
+                AIRushDataset(test_image_data_path, test_meta_data, label_path=None,
+                              transform=transforms.Compose(
+                                  infer_transform_list)),#[transforms.Resize((args.input_size, args.input_size)), transforms.ToTensor()])),
+                batch_size=batch_size,
+                shuffle=False,
+                num_workers=0,
+                pin_memory=True)
+
 
             if model_name == "Resnet18":
                 model = Resnet18(args.output_size)
@@ -142,6 +174,16 @@ if __name__ == '__main__':
 
     # train
     # cross_entropy, bce, multi_soft_margin, multi_margin, focal_loss, kldiv
+    parser.add_argument('--transform_random_crop', type=str, default="False,False")
+    parser.add_argument('--transform_random_sized_crop', type=str, default="False,False")
+    parser.add_argument('--transform_norm', type=str, default="False,False")
+    parser.add_argument('--transform_hor_flip', type=str, default="False,False")
+    parser.add_argument('--transform_color_jitter', type=str, default="False,False")
+
+    parser.add_argument('--infer_transform_5crop', type=str, default="False,False")
+    parser.add_argument('--infer_transform_10crop', type=str, default="False,False")
+    parser.add_argument('--infer_transform_center_crop', type=str, default="False,False")
+
     parser.add_argument('--loss_types', type=str, default="cross_entropy,cross_entropy")
     parser.add_argument('--nsml_checkpoints', type=str, default="4,5")
     parser.add_argument('--nsml_sessionss', type=str, default="99,385")  # team_13/airush1/
