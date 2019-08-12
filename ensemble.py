@@ -184,12 +184,12 @@ if __name__ == '__main__':
     parser.add_argument('--infer_transform_10crop', type=str, default="False,False")
     parser.add_argument('--infer_transform_center_crop', type=str, default="False,False")
 
-    parser.add_argument('--loss_types', type=str, default="cross_entropy,cross_entropy")
-    parser.add_argument('--nsml_checkpoints', type=str, default="4,5")
-    parser.add_argument('--nsml_sessionss', type=str, default="99,385")  # team_13/airush1/
-    parser.add_argument('--model_weights', type=str, default="0.5,0.5")
+    parser.add_argument('--loss_types', type=str, default="cross_entropy,cross_entropy,cross_entropy")
+    parser.add_argument('--nsml_checkpoints', type=str, default="4,5,6_1181")
+    parser.add_argument('--nsml_sessionss', type=str, default="99,385,408")  # team_13/airush1/
+    parser.add_argument('--model_weights', type=str, default="0.34,0.33,0.33")
     parser.add_argument('--models', type=str,
-                        default="Resnet152,Resnet152")  # Resnet18, Resnet152, efficientnet-b7, baseline
+                        default="Resnet152,Resnet152,Resnet152")  # Resnet18, Resnet152, efficientnet-b7, baseline
 
     args = parser.parse_args()
     print(args)

@@ -118,7 +118,7 @@ if __name__ == '__main__':
     parser.add_argument('--val_ratio', type=float, default=0.0)
 
     parser.add_argument('--transform_random_crop', type=bool, default=False)
-    parser.add_argument('--transform_random_sized_crop', type=bool, default=False)
+    parser.add_argument('--transform_random_sized_crop', type=bool, default=True)
     parser.add_argument('--transform_norm', type=bool, default=False)
     parser.add_argument('--transform_hor_flip', type=bool, default=False)
     parser.add_argument('--transform_color_jitter', type=bool, default=False)
@@ -126,17 +126,17 @@ if __name__ == '__main__':
     parser.add_argument('--infer_transform_5crop', type=bool, default=False)
     parser.add_argument('--infer_transform_10crop', type=bool, default=False)
     parser.add_argument('--infer_transform_center_crop', type=bool, default=False)
-    parser.add_argument('--seed', type=int, default=41)  # 42)
+    parser.add_argument('--seed', type=int, default=40)  # 42)
     parser.add_argument('--sava_step_ratio', type=float, default=0.26)
 
-    parser.add_argument('--learning_rate', type=float, default=0.0000017)  # 2.5e-4)
+    parser.add_argument('--learning_rate', type=float, default=0.0000015)  # 2.5e-4)
     parser.add_argument('--nsml_checkpoint', type=str, default="5")
     parser.add_argument('--nsml_session', type=str, default="team_13/airush1/385")
 
     parser.add_argument('--class_weight_adding', type=float, default=0.0)
-    parser.add_argument('--weight_decay', type=float, default=0.0)  # 0.00004)
+    parser.add_argument('--weight_decay', type=float, default=0.0)#0.00001)  # 0.00004)
     parser.add_argument('--nesterov', type=bool, default=True)
-    parser.add_argument('--use_random_label', type=bool, default=True)
+    parser.add_argument('--use_random_label', type=bool, default=False)
 
     parser.add_argument('--optimizer', type=str, default="sgd")  # adam, sgd, adabound, adamw
     parser.add_argument('--loss_type', type=str,
@@ -227,9 +227,9 @@ if __name__ == '__main__':
 
     if args.infer_transform_5crop or args.infer_transform_10crop:
         if args.transform_random_crop:
-            infer_transform_list.append(transforms.Resize((256, 256)))
+            infer_transform_list.append(transforms.Resize((248, 248)))
         elif args.transform_random_sized_crop:
-            infer_transform_list.append(transforms.Resize((256, 256)))
+            infer_transform_list.append(transforms.Resize((248, 248)))
         else:
             infer_transform_list.append(transforms.Resize((args.input_size, args.input_size)))
 
@@ -264,10 +264,10 @@ if __name__ == '__main__':
                 transforms.Normalize([0.44097832, 0.44847423, 0.42528335], [0.25748107, 0.26744914, 0.30532702]))
     else:
         if args.transform_random_crop:
-            infer_transform_list.append(transforms.Resize((256, 256)))
+            infer_transform_list.append(transforms.Resize((248, 248)))
             infer_transform_list.append(transforms.CenterCrop((args.input_size, args.input_size)))
         elif args.transform_random_sized_crop:
-            infer_transform_list.append(transforms.Resize((256, 256)))
+            infer_transform_list.append(transforms.Resize((248, 248)))
             infer_transform_list.append(transforms.CenterCrop((args.input_size, args.input_size)))
         else:
             infer_transform_list.append(transforms.Resize((args.input_size, args.input_size)))
