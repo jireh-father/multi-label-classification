@@ -111,9 +111,6 @@ if __name__ == '__main__':
 
 
     # train
-    parser.add_argument('--learning_rate', type=float, default=0.0000017)  # 2.5e-4)
-    parser.add_argument('--nsml_checkpoint', type=str, default="5")
-    parser.add_argument('--nsml_session', type=str, default="team_13/airush1/385")
     parser.add_argument('--load_nsml_cp', type=bool, default=True)
     parser.add_argument('--only_save', type=bool, default=False)
     parser.add_argument('--use_train', type=bool, default=True)
@@ -131,6 +128,10 @@ if __name__ == '__main__':
     parser.add_argument('--infer_transform_center_crop', type=bool, default=False)
     parser.add_argument('--seed', type=int, default=41)  # 42)
     parser.add_argument('--sava_step_ratio', type=float, default=0.26)
+
+    parser.add_argument('--learning_rate', type=float, default=0.0000017)  # 2.5e-4)
+    parser.add_argument('--nsml_checkpoint', type=str, default="5")
+    parser.add_argument('--nsml_session', type=str, default="team_13/airush1/385")
 
     parser.add_argument('--class_weight_adding', type=float, default=0.0)
     parser.add_argument('--weight_decay', type=float, default=0.0)  # 0.00004)

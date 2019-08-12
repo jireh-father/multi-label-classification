@@ -68,25 +68,25 @@ def bind_model(model_nsml, args):
 
             infer_transform_list = []
 
-            if infer_transform_center_crop[i]:
+            if infer_transform_center_crop[i] == "True":
                 infer_transform_list.append(transforms.Resize((248, 248)))
                 infer_transform_list.append(transforms.CenterCrop((args.input_size, args.input_size)))
                 infer_transform_list.append(transforms.ToTensor())
-                if transform_norm[i]:
+                if transform_norm[i] == "True":
                     infer_transform_list.append(
                         transforms.Normalize([0.44097832, 0.44847423, 0.42528335],
                                              [0.25748107, 0.26744914, 0.30532702]))
             else:
-                if transform_random_crop[i]:
+                if transform_random_crop[i] == "True":
                     infer_transform_list.append(transforms.Resize((256, 256)))
                     infer_transform_list.append(transforms.CenterCrop((args.input_size, args.input_size)))
-                elif transform_random_sized_crop[i]:
+                elif transform_random_sized_crop[i] == "True":
                     infer_transform_list.append(transforms.Resize((256, 256)))
                     infer_transform_list.append(transforms.CenterCrop((args.input_size, args.input_size)))
                 else:
                     infer_transform_list.append(transforms.Resize((args.input_size, args.input_size)))
                 infer_transform_list.append(transforms.ToTensor())
-                if transform_norm[i]:
+                if transform_norm[i] == "True":
                     infer_transform_list.append(
                         transforms.Normalize([0.44097832, 0.44847423, 0.42528335],
                                              [0.25748107, 0.26744914, 0.30532702]))
